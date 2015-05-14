@@ -17,96 +17,58 @@ is_device_active() {
 activate_thin_device() {
   local pool_name=$1 device_name=$2  device_id=$3  device_size=$4
 
-  if is_device_active $device_name;then
-    return
-  fi
-
-  if ! dmsetup create $device_name --table "0 $device_size thin /dev/mapper/$pool_name ${device_id}";then
-	  return 1
-  fi
+  is_device_active $device_name && return 0
+  dmsetup create $device_name --table "0 $device_size thin /dev/mapper/$pool_name ${device_id}" && return 0
+  return 1
 }
 
 remove_thin_device() {
-	local device_name=$1
-	dmsetup remove $device_name
+	dmsetup remove $1 || return 1
 }
 
 get_graph_driver() {
-  local id=$1
   local graphdriver
-
-  if ! graphdriver=$(docker inspect --format='{{.GraphDriver.Name}}' $id);then
-	  return 1
-  fi
+  graphdriver=$(docker inspect --format='{{.GraphDriver.Name}}' $1) || return 1
   echo $graphdriver
 }
 
 get_pool_name() {
   local pool_name
-
-  if ! pool_name=$(docker info | grep "Pool Name:" | cut -d " " -f4); then
-    return 1
-  fi
+  pool_name=$(docker info | grep "Pool Name:" | cut -d " " -f4) || return 1
   echo $pool_name
 }
 
 get_thin_device_id() {
-  local id=$1
   local device_id
-
-  if ! device_id=$(docker inspect --format='{{index (index .GraphDriver.Data 0) 1}}' $id); then
-    return 1
-  fi
+  device_id=$(docker inspect --format='{{index (index .GraphDriver.Data 0) 1}}' $1) || return 1
   echo $device_id
 }
 
 get_thin_device_size() {
-  local id=$1
   local device_size
-
-  if ! device_size=$(docker inspect --format='{{index (index .GraphDriver.Data 1) 1}}' $id);then
-    return 1
-  fi
+  device_size=$(docker inspect --format='{{index (index .GraphDriver.Data 1) 1}}' $1) || return 1
   echo $device_size
 }
 
 create_container() {
-  local image=$1
   local container_id
-
-  if ! container_id=$(docker create $image true);then
-	  echo "Creating container from image $image failed."
-	  return 1
-  fi
-
+  container_id=$(docker create $1 true) || return 1
   echo $container_id
 }
 
 remove_container() {
-  local container=$1
-
-  if ! docker rm $1;then
-	  return 1
-  fi
+  docker rm $1 || return 1
 }
 
 get_graph_driver () {
-  local id=$1
   local graphdriver
-
-  if ! graphdriver=$(docker inspect --format='{{.GraphDriver.Name}}' $id);then
-    return 1
-  fi
-
+  graphdriver=$(docker inspect --format='{{.GraphDriver.Name}}' $1) || return 1
   echo $graphdriver
 }
 
 get_image_id () {
   local image_id
-
-  if ! image_id=$(docker inspect --format='{{.Id}}' $1); then
-   return 1
-  fi
+  image_id=$(docker inspect --format='{{.Id}}' $1) || return 1
   echo $image_id
 }
 

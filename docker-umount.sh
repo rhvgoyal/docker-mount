@@ -10,14 +10,11 @@
 # Author: Vivek Goyal <vgoyal@redhat.com>
 
 remove_thin_device() {
-	local device_name=$1
-	dmsetup remove $device_name
+	dmsetup remove $1 || return 1
 }
 
 remove_container() {
-  if ! docker rm $1 > /dev/null; then
-    return 1
-  fi
+  docker rm $1 > /dev/null || return 1
 }
 
 unmount_image() {
