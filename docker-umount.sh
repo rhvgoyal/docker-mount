@@ -14,9 +14,15 @@ remove_thin_device() {
 	dmsetup remove $device_name
 }
 
+remove_container() {
+  if ! docker rm $1 > /dev/null; then
+    return 1
+  fi
+}
+
 unmount_image() {
   local dir=$1
-  local device
+  local device container_id
 
   if ! device=$(findmnt -n -o SOURCE --target $dir);then
     echo "Failed to determine source of mount target"
@@ -31,6 +37,11 @@ unmount_image() {
   if ! remove_thin_device $device;then
     echo "Failed to remove thin device $device"
     exit 1
+  fi
+
+  container_id=${device#/dev/mapper/thin-}
+  if ! remove_container ${container_id}; then
+	  echo "Failed to remove container $container_id"
   fi
 }
 
