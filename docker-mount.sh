@@ -5,7 +5,7 @@
 # An script to mount an image at specified mount point.
 #
 # This source code is licensed under the GNU General Public License,
-# Version 2.  See the file COPYING for more details.
+# Version 2.  See the file LICENSE for more details.
 #
 # Author: Vivek Goyal <vgoyal@redhat.com>
 
