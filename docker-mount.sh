@@ -109,7 +109,7 @@ get_graph_driver () {
 get_image_id () {
   local image_id
 
-  if ! image_id=$(docker inspect --format='{{.Id}}' $image); then
+  if ! image_id=$(docker inspect --format='{{.Id}}' $1); then
    return 1
   fi
   echo $image_id
