@@ -10,19 +10,14 @@
 # Author: Vivek Goyal <vgoyal@redhat.com>
 
 is_device_active() {
-  local device=$1
-  if ! dmsetup info $device;then
-	  return 1
-  fi
+  [ -n "$1" ] || return 1
+  dmsetup info $1 > /dev/null 2>&1 || return 1
 }
 
 activate_thin_device() {
-  local pool_name=$1
-  local device_name=$2
-  local device_id=$3
-  local device_size=$4
+  local pool_name=$1 device_name=$2  device_id=$3  device_size=$4
 
-  if is_device_active $device_name > /dev/null 2>&1;then
+  if is_device_active $device_name;then
     return
   fi
 
