@@ -36,13 +36,52 @@ remove_thin_device() {
 	dmsetup remove $device_name
 }
 
+get_graph_driver() {
+  local id=$1
+  local graphdriver
+
+  if ! graphdriver=$(docker inspect --format='{{.GraphDriver.Name}}' $id);then
+	  return 1
+  fi
+  echo $graphdriver
+}
+
+get_pool_name() {
+  local pool_name
+
+  if ! pool_name=$(docker info | grep "Pool Name:" | cut -d " " -f4); then
+    return 1
+  fi
+  echo $pool_name
+}
+
+get_thin_device_id() {
+  local id=$1
+  local device_id
+
+  if ! device_id=$(docker inspect --format='{{index (index .GraphDriver.Data 0) 1}}' $id); then
+    return 1
+  fi
+  echo $device_id
+}
+
+get_thin_device_size() {
+  local id=$1
+  local device_size
+
+  if ! device_size=$(docker inspect --format='{{index (index .GraphDriver.Data 1) 1}}' $id);then
+    return 1
+  fi
+  echo $device_size
+}
+
 mount_image() {
   local image=$1
   local dir=$2
   local graphdriver pool_name image_id device_id device_size device_size_sectors
   local device_name
 
-  if ! graphdriver=$(docker inspect --format='{{.GraphDriver.Name}}' $image);then
+  if ! graphdriver=$(get_graph_driver $image);then
     echo "Failed to determine docker graph driver being used. Exiting."
     exit 1
   fi
@@ -52,7 +91,7 @@ mount_image() {
 	  exit 1
   fi
 
-  if ! pool_name=$(docker info | grep "Pool Name:" | cut -d " " -f4); then
+  if ! pool_name=$(get_pool_name); then
     echo "Failed to determine thin pool name. Exiting."
     exit 1
   fi
@@ -67,17 +106,17 @@ mount_image() {
     exit 1
   fi
 
-  if ! device_id=$(docker inspect --format='{{index (index .GraphDriver.Data 0) 1}}' $image); then
+  if ! device_id=$(get_thin_device_id ${image}); then
     echo "Failed to determine thin device id. Exiting."
     exit 1
   fi
 
-  if ! device_size=$(docker inspect --format='{{index (index .GraphDriver.Data 1) 1}}' $image);then
+  if ! device_size=$(get_thin_device_size $image);then
     echo "Failed to determine thin device size. Exiting."
     exit 1
   fi
 
-  device_size_sectors=$(( $device_size/512))
+  device_size_sectors=$(($device_size/512))
   device_name="thin-${image_id}"
 
   if ! activate_thin_device "$pool_name" "$device_name" "$device_id" "$device_size_sectors";then
