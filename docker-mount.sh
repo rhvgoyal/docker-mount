@@ -60,12 +60,6 @@ remove_container() {
   docker rm $1 || return 1
 }
 
-get_graph_driver () {
-  local graphdriver
-  graphdriver=$(docker inspect --format='{{.GraphDriver.Name}}' $1) || return 1
-  echo $graphdriver
-}
-
 get_image_id () {
   local image_id
   image_id=$(docker inspect --format='{{.Id}}' $1) || return 1
