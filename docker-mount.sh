@@ -40,13 +40,13 @@ get_pool_name() {
 
 get_thin_device_id() {
   local device_id
-  device_id=$(docker inspect --format='{{index (index .GraphDriver.Data 0) 1}}' $1) || return 1
+  device_id=$(docker inspect --format='{{.GraphDriver.Data.DeviceId}}' $1) || return 1
   echo $device_id
 }
 
 get_thin_device_size() {
   local device_size
-  device_size=$(docker inspect --format='{{index (index .GraphDriver.Data 1) 1}}' $1) || return 1
+  device_size=$(docker inspect --format='{{printf "%.0f" .GraphDriver.Data.DeviceSize}}' $1) || return 1
   echo $device_size
 }
 
