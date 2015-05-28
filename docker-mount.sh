@@ -14,6 +14,13 @@ is_device_active() {
   dmsetup info $1 > /dev/null 2>&1 || return 1
 }
 
+get_fs_type() {
+  local fstype
+  fstype=$(lsblk -o FSTYPE -n $1) || return 1
+  echo $fstype
+}
+
+
 activate_thin_device() {
   local pool_name=$1 device_name=$2  device_id=$3  device_size=$4
 
@@ -71,6 +78,7 @@ mount_image() {
   local dir=$2
   local graphdriver pool_name image_id device_id device_size device_size_sectors
   local device_name container_id
+  local mnt_opts="ro" fstype
 
   if ! image_id=$(get_image_id $image); then
     echo "Failed to determine image id. Exiting."
@@ -125,7 +133,17 @@ mount_image() {
 	  exit 1
   fi
 
-  if ! mount -o "ro" /dev/mapper/$device_name $dir;then
+  if ! fstype=$(get_fs_type "/dev/mapper/$device_name");then
+	  echo "Failed to get fs type for device $device_name. Exiting."
+	  remove_thin_device $device_name
+	  exit 1
+  fi
+
+  if [ "$fstype" == "xfs" ];then
+	  mnt_opts="$mnt_opts,nouuid"
+  fi
+
+  if ! mount -o ${mnt_opts} /dev/mapper/$device_name $dir;then
     echo "Failed to mount thin device."
     remove_thin_device $device_name
     exit 1
