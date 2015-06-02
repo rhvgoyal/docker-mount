@@ -53,7 +53,7 @@ get_thin_device_id() {
 
 get_thin_device_size() {
   local device_size
-  device_size=$(docker inspect --format='{{printf "%.0f" .GraphDriver.Data.DeviceSize}}' $1) || return 1
+  device_size=$(docker inspect --format='{{.GraphDriver.Data.DeviceSize}}' $1) || return 1
   echo $device_size
 }
 
