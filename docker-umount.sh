@@ -17,14 +17,9 @@ remove_container() {
   docker rm $1 > /dev/null || return 1
 }
 
-unmount_image() {
+unmount_devicemapper() {
   local dir=$1
-  local device container_id
-
-  if ! device=$(findmnt -n -o SOURCE --target $dir);then
-    echo "Failed to determine source of mount target"
-    exit 1
-  fi
+  local device=$2
 
   if ! umount $dir;then
     echo "Failed to unmount $dir"
@@ -39,6 +34,57 @@ unmount_image() {
   container_id=${device#/dev/mapper/thin-}
   if ! remove_container ${container_id}; then
 	  echo "Failed to remove container $container_id"
+  fi
+}
+
+unmount_overlay() {
+  local dir=$1
+  local upper_dir container_id
+
+  #Determine container id from mount options.
+  if ! upper_dir=$(findmnt -n -o OPTIONS --target /tmp/image | sed 's/.*\(upperdir=.*,\).*/\1/' | sed 's/,$//');then
+    echo "Failed to find upper dir from mount options"
+    return 1
+  fi
+
+  if [ ! -n "$upper_dir" ];then
+	  echo "Failed to determine upper directory from mount options."
+	  return 1
+  fi
+
+  container_id=${upper_dir#upperdir=/var/lib/docker/overlay/}
+  container_id=${container_id%/upper}
+
+  if [ ! -n "$container_id" ];then
+	  echo "Failed to determine container_id."
+	  return 1
+  fi
+
+  if ! umount $dir;then
+    echo "Failed to unmount $dir"
+    return 1
+  fi
+
+  if ! remove_container ${container_id}; then
+	  echo "Failed to remove container $container_id"
+	  return 1
+  fi
+
+}
+
+unmount_image() {
+  local dir=$1
+  local device container_id
+
+  if ! device=$(findmnt -n -o SOURCE --target $dir);then
+    echo "Failed to determine source of mount target"
+    exit 1
+  fi
+
+  if [ "$device" == "overlay" ];then
+    unmount_overlay $dir
+  else
+    unmount_devicemapper $dir $device
   fi
 }
 
