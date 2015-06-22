@@ -35,8 +35,24 @@ remove_thin_device() {
 
 get_graph_driver() {
   local graphdriver
-  graphdriver=$(docker inspect --format='{{.GraphDriver.Name}}' $1) || return 1
+  graphdriver=$(docker info 2>/dev/null | grep "Storage Driver" | cut -d":" -f2 | sed 's/^ *//') || return 1
+
+  [ ! -n "$graphdriver" ] && return 1
+
   echo $graphdriver
+}
+
+check_graph_driver() {
+  local graphdriver
+  if ! graphdriver=`get_graph_driver`; then
+	  echo "Failed to determine graphdriver. Exiting."
+	  exit 1
+  fi
+
+  if [ "$graphdriver" != "devicemapper" ];then
+    echo "Graph driver $graphdriver is not supported. Exiting"
+    exit 1
+  fi
 }
 
 get_pool_name() {
@@ -88,18 +104,6 @@ mount_image() {
   # Create a test container from image
   if ! container_id=$(create_container ${image});then
     echo "Create container from image $image failed."
-    exit 1
-  fi
-
-  if ! graphdriver=$(get_graph_driver ${container_id});then
-    echo "Failed to determine docker graph driver being used. Exiting."
-    remove_container ${container_id}
-    exit 1
-  fi
-
-  if [ "$graphdriver" != "devicemapper" ];then
-    echo "Docker graph driver is not devicemapper. Exiting."
-    remove_container ${container_id}
     exit 1
   fi
 
@@ -167,6 +171,8 @@ if [ ! -d "$MNTDIR" ];then
 	echo "Directory $MNTDIR does not exist"
 	exit 1
 fi
+
+check_graph_driver
 
 mount_image "$IMAGE" "$MNTDIR"
 
